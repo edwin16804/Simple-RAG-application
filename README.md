@@ -6,7 +6,7 @@ A simple Retrieval-Augmented Generation (RAG) system built with FastAPI that all
 
 - **PDF Document Upload**: Upload PDF files and automatically extract text content
 - **Vector Embeddings**: Generate embeddings using Ollama's `nomic-embed-text` model
-- **Vector Database**: Store and query embeddings using AstraDB (DataStax)
+- **Vector Database**: Store and query embeddings using ChromaDB
 - **Semantic Search**: Find relevant document sections based on your queries
 - **AI-Powered Responses**: Get contextual answers using OpenRouter's GPT models
 - **RESTful API**: Clean FastAPI endpoints for easy integration
@@ -14,7 +14,7 @@ A simple Retrieval-Augmented Generation (RAG) system built with FastAPI that all
 ## Architecture
 
 ```
-PDF Upload → Text Extraction → Embedding Generation → Vector Storage (AstraDB)
+PDF Upload → Text Extraction → Embedding Generation → Vector Storage (ChromaDB)
                                                            ↓
 User Query → Embedding Generation → Vector Search → Context Retrieval → AI Response
 ```
@@ -23,7 +23,7 @@ User Query → Embedding Generation → Vector Search → Context Retrieval → 
 
 - Python 3.8+
 - Ollama installed and running locally
-- AstraDB account and credentials
+- ChromaDB account and credentials
 - OpenRouter API key
 
 ## Installation
@@ -36,7 +36,7 @@ User Query → Embedding Generation → Vector Search → Context Retrieval → 
 
 2. **Install dependencies**
    ```bash
-   pip install fastapi uvicorn langchain-community openai python-dotenv astrapy ollama
+   pip install fastapi uvicorn langchain-community openai python-dotenv chromadb ollama
    ```
 
 3. **Install and setup Ollama**
@@ -49,8 +49,9 @@ User Query → Embedding Generation → Vector Search → Context Retrieval → 
    Create a `.env` file in the project root with the following variables:
    ```env
    OPENROUTER_API_KEY=your_openrouter_api_key
-   APPLICATION_TOKEN=your_astradb_application_token
-   API_ENDPOINT=your_astradb_api_endpoint
+   CHROMA_API_KEY=your_chromadb_api_key
+   CHROMA_TENANT_ID=your_chromadb_tenant_id
+   CHROMA_DATABASE=your_chromadb_database_name
    ```
 
 ## Usage
@@ -119,7 +120,7 @@ Simple-RAG-System/
 ├── main.py                    # FastAPI application and endpoints
 ├── utils/
 │   ├── __init__.py
-│   ├── astradb_operations.py  # AstraDB vector operations
+│   ├── chromadb_operations.py # ChromaDB vector operations
 │   └── generate_embeddings.py # Embedding generation using Ollama
 ├── README.md
 └── .env                       # Environment variables (create this)
@@ -127,11 +128,11 @@ Simple-RAG-System/
 
 ## Configuration
 
-### AstraDB Setup
-1. Create a database in AstraDB
-2. Create a collection named `pdf_vectors` with vector configuration:
-   - Dimension: 768 (for nomic-embed-text)
-   - Metric: COSINE
+### ChromaDB Setup
+1. Create a ChromaDB Cloud account
+2. Create a database in ChromaDB Cloud
+3. The collection `my_collection` will be automatically created when you first run the application
+4. The collection uses 768-dimensional embeddings (for nomic-embed-text)
 
 ### Model Configuration
 - **Embedding Model**: `nomic-embed-text` (via Ollama)
@@ -142,7 +143,7 @@ Simple-RAG-System/
 - **FastAPI**: Web framework
 - **LangChain**: Document processing
 - **Ollama**: Local embedding generation
-- **AstraDB**: Vector database
+- **ChromaDB**: Vector database
 - **OpenRouter**: LLM API access
 - **OpenAI**: API client
 
@@ -162,13 +163,5 @@ This project is open source and available under the [MIT License](LICENSE).
 ### Common Issues
 
 1. **Ollama not running**: Make sure Ollama is installed and the `nomic-embed-text` model is pulled
-2. **AstraDB connection failed**: Verify your credentials and endpoint in the `.env` file
+2. **ChromaDB connection failed**: Verify your API key, tenant ID, and database name in the `.env` file
 3. **OpenRouter API errors**: Check your API key and account status
-
-### Getting Help
-
-If you encounter issues:
-1. Check the logs for error messages
-2. Verify all environment variables are set correctly
-3. Ensure all services (Ollama, AstraDB) are accessible
-4. Open an issue on GitHub with detailed error information

@@ -5,10 +5,13 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from utils.generate_embeddings import generate_embeddings, prompt_embedding
-from utils.astradb_operations import vector_upload, vector_query
+from utils.chromadb_operations import vector_upload, vector_query  # CHROMA import
+import logging
 
 app = FastAPI()
 load_dotenv()
+
+logger = logging.getLogger("uvicorn")
 
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
@@ -34,7 +37,6 @@ async def upload_file(file: UploadFile):
 
         loader = PyPDFLoader(tmp.name)
         cleaned_pages = [clean_text(page.page_content) for page in loader.load_and_split()]
-
         embeddings = generate_embeddings(cleaned_pages, file.filename)
         vector_upload(embeddings, cleaned_pages)
 
@@ -49,9 +51,13 @@ async def upload_file(file: UploadFile):
 @app.post("/chat/")
 async def chat(text: str):
     embedding = prompt_embedding(text)
-    matched_docs = vector_query(embedding, top_k=3)
+    logger.info(f"Generated embedding for query: {embedding}")
+    logger.info(f"Length of embedding: {len(embedding)}")
+    logger.info("Querying vector database for similar documents...")
 
-    combined_context = "\n\n---\n\n".join(doc.get("page_content") for doc in matched_docs if doc.get("page_content"))
+    matched_contents = vector_query(embedding, top_k=3)  # Now returns a list of strings
+
+    combined_context = "\n\n---\n\n".join(matched_contents)
 
     system_content = (
         "You are a helpful assistant that helps users find information "
@@ -75,11 +81,7 @@ async def chat(text: str):
     return {
         "query": text,
         "answer": answer,
-        "similar_documents": [
-            {
-                "page_content": doc.get("page_content"),
-                "page_number": doc.get("page_number"),
-                "filename": doc.get("filename")
-            } for doc in matched_docs
-        ]
+        # The content-only version for Chroma:
+        "similar_documents":len(matched_contents)
+        
     }

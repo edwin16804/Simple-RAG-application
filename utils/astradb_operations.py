@@ -39,11 +39,18 @@ def vector_query(embedding, top_k=3):
     if not collection:
         raise ValueError("Collection 'pdf_vectors' does not exist.")
 
-    cursor = collection.find({}, limit=top_k, sort={"$vector": embedding}, include_similarity=True)
+    cursor = collection.find(
+        {},
+        sort={"$vector": embedding},
+        projection={"page_content": True, "page_number": True, "filename": True},
+        limit=top_k,
+        include_similarity=True
+    )
 
     documents = []
     for doc in cursor:
         print(doc)
         documents.append(doc)
-
     return documents
+
+
