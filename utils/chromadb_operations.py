@@ -1,24 +1,3 @@
-# import chromadb
-
-
-
-# client = chromadb.CloudClient(
-#   api_key='ck-tieDHeNUuhYG4tEoapHyNYdZ3h5RT1yGUqtya2eBLuh',
-#   tenant='87e1dc83-c9b7-4de7-9246-7f4291fe8b60',
-#   database='Simple-RAG-app'
-# )
-
-
-# collection = client.get_or_create_collection(
-#     name="my_collection",
-#     embedding_function=None
-# )
-
-# if not collection:
-#     raise ValueError("Collection 'my_collection' does not exist.")
-# else:
-#     print("Collection 'my_collection' found or created successfully.")
-
 import chromadb
 import os
 import uuid
