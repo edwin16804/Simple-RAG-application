@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-# Setup Chroma Cloud client (fill with your actual credentials)
 client = chromadb.CloudClient(
     api_key=os.getenv("CHROMA_API_KEY"),
     tenant=os.getenv("CHROMA_TENANT_ID"),
@@ -15,11 +14,11 @@ client = chromadb.CloudClient(
 
 # Ensure the collection exists
 collection = client.get_or_create_collection(
-    name="my_collection", # analogous to your AstraDB collection name
-    embedding_function=None  # Use direct embedding input, not built-in function
+    name="my_collection", 
+    embedding_function=None  
 )
 if not collection:
-    raise ValueError("Collection 'pdf_vectors' could not be found or created.")
+    raise ValueError("Collection 'my_collection' could not be found or created.")
 
 def vector_upload(embeddings, contents):
     """
@@ -44,5 +43,5 @@ def vector_query(embedding, top_k=3):
         query_embeddings=[embedding],
         n_results=top_k
     )
-    # Return a list of strings (page contents)
+
     return results["documents"][0]
