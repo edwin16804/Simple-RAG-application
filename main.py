@@ -7,6 +7,11 @@ from dotenv import load_dotenv
 from utils.generate_embeddings import generate_embeddings, prompt_embedding
 from utils.chromadb_operations import vector_upload, vector_query  # CHROMA import
 import logging
+import requests
+import base64
+import json
+from markdown import markdown
+from bs4 import BeautifulSoup
 
 app = FastAPI()
 load_dotenv()
@@ -14,18 +19,85 @@ load_dotenv()
 logger = logging.getLogger("uvicorn")
 
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+github_token = os.getenv("GITHUB_TOKEN")
+
+headers = {
+    "Accept": "application/vnd.github+json",
+    "Authorization": f"Bearer {github_token}",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
+
+
+def fetch_repos_with_readme(username: str):
+    """Fetch repos for a user and their README contents."""
+    url = f"https://api.github.com/users/{username}/repos"
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        logger.error(f"Failed to fetch repos: {response.status_code} - {response.text}")
+        return []
+
+    repos = response.json()
+    repo_list = []
+
+    for repo in repos:
+        repo_name = repo["name"]
+        readme_url = f"https://api.github.com/repos/{username}/{repo_name}/readme"
+        readme_text = None
+
+        readme_response = requests.get(readme_url, headers=headers)
+        if readme_response.status_code == 200:
+            data = readme_response.json()
+            try:
+                content = data.get("content", "")
+                readme_text = base64.b64decode(content).decode("utf-8")
+                html = markdown(readme_text)
+                soup = BeautifulSoup(html, "html.parser")
+                readme_content = soup.get_text(separator="\n").strip()
+            except Exception as e:
+                logger.error(f"Failed to decode README for {repo_name}: {e}")
+        else:
+            logger.warning(f"No README for {repo_name}")
+
+        repo_list.append({
+            "repo_name": repo_name,
+            "repo_link": repo["html_url"],
+            "readme": readme_content or ""
+        })
+
+    # Save JSON file
+    with open("repos.json", "w", encoding="utf-8") as f:
+        json.dump(repo_list, f, indent=4)
+
+    logger.info(f"Saved repos.json with {len(repo_list)} repositories")
+    return repo_list
+
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=openrouter_api_key,
 )
 
+if client:
+    logger.info("OpenAI client initialized successfully.")
+else:
+    logger.error("Failed to initialize OpenAI client.")
+
+
 def clean_text(text: str) -> str:
     return ' '.join(text.replace('\n', ' ').split())
+
+
+@app.on_event("startup")
+def startup_event():
+    """Fetch repos at startup and save JSON."""
+    fetch_repos_with_readme("edwin16804")
+
 
 @app.get("/")
 def root():
     return "Simple RAG application"
+
 
 @app.post("/uploadfile/")
 async def upload_file(file: UploadFile):
@@ -48,6 +120,7 @@ async def upload_file(file: UploadFile):
     finally:
         os.unlink(tmp.name)
 
+
 @app.post("/chat/")
 async def chat(text: str):
     embedding = prompt_embedding(text)
@@ -55,7 +128,7 @@ async def chat(text: str):
     logger.info(f"Length of embedding: {len(embedding)}")
     logger.info("Querying vector database for similar documents...")
 
-    matched_contents = vector_query(embedding, top_k=3)  # Now returns a list of strings
+    matched_contents = vector_query(embedding, top_k=3)
 
     combined_context = "\n\n---\n\n".join(matched_contents)
 
@@ -81,7 +154,10 @@ async def chat(text: str):
     return {
         "query": text,
         "answer": answer,
-        # The content-only version for Chroma:
-        "similar_documents":len(matched_contents)
-        
+        "similar_documents": len(matched_contents)
     }
+
+
+# @app.get("/file/{filename}")
+# async def read_file_name(filename: str):
+#     return {"filename": filename}
